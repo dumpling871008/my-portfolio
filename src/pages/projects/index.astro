@@ -1,0 +1,22 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProjectRow from '@/components/ProjectRow.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+
+const allProjects = (await getCollection('projects', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+---
+
+<BaseLayout
+  title="Projects"
+  description="Selected projects in product design and frontend engineering."
+>
+  <section class="mx-auto max-w-3xl px-6 pt-16 pb-24 sm:pt-24">
+    <SectionHeading eyebrow="All projects" count={allProjects.length} />
+    <div>
+      {allProjects.map((entry) => <ProjectRow entry={entry} />)}
+    </div>
+  </section>
+</BaseLayout>
