@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
 import ProjectRow from '@/components/ProjectRow.astro';
+import NoteRow from '@/components/NoteRow.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import { SITE } from '@/site.config';
 
@@ -11,6 +12,10 @@ const sorted = [...allProjects].sort((a, b) => b.data.date.valueOf() - a.data.da
 const featured = sorted.filter((entry) => entry.data.featured);
 const rest = sorted.filter((entry) => !entry.data.featured);
 const selected = [...featured, ...rest].slice(0, 5);
+const allNotes = (await getCollection('notes', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+const recentNotes = allNotes.slice(0, 3);
 ---
 
 <BaseLayout title={SITE.name}>
@@ -25,12 +30,12 @@ const selected = [...featured, ...rest].slice(0, 5);
     </h1>
 
     <p class="text-ink-soft mt-6 max-w-md">
-      {SITE.role} 
+      {SITE.role}
     </p>
 
     <div class="mt-8 flex flex-wrap items-center gap-3">
       <Button href="/projects" variant="solid">View the projects →</Button>
-      <Button href="#contact" variant="ghost">Say hello</Button>
+      <Button href="#contact" variant="ghost">contact me</Button>
     </div>
   </section>
 
@@ -63,7 +68,24 @@ const selected = [...featured, ...rest].slice(0, 5);
     }
   </section>
 
-
+  <section id="notes" class="mx-auto max-w-3xl px-6 pb-20">
+    <SectionHeading eyebrow="Recent notes" count={allNotes.length} />
+    <div>
+      {recentNotes.map((entry) => <NoteRow entry={entry} />)}
+    </div>
+    {
+      allNotes.length > recentNotes.length && (
+        <div class="mt-6">
+          <a
+            href="/notes"
+            class="text-ink-soft hover:text-signal font-mono text-xs transition-colors"
+          >
+            View all {allNotes.length} notes →
+          </a>
+        </div>
+      )
+    }
+  </section>
 
   <section id="contact" class="mx-auto max-w-3xl px-6 pb-24">
     <SectionHeading eyebrow="Let's talk" />

@@ -1,0 +1,64 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import { formatDate } from '@/utils/formatDate';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('notes', ({ data }) => !data.draft);
+  return entries.map((entry) => ({
+    params: { id: entry.id },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<'notes'>;
+}
+
+const { entry } = Astro.props;
+const { title, summary, date, tags, notionUrl } = entry.data;
+const { Content } = await render(entry);
+const formattedDate = formatDate(date);
+---
+
+<BaseLayout title={title} description={summary}>
+  <article class="mx-auto max-w-3xl px-6 pt-16 pb-24 sm:pt-24">
+    <a href="/notes" class="text-ink-soft hover:text-signal font-mono text-xs transition-colors">
+      ← All notes
+    </a>
+
+    <h1 class="font-display text-ink mt-6 max-w-2xl text-3xl font-medium sm:text-4xl">
+      {title}
+    </h1>
+    <p class="text-ink-soft mt-4 max-w-2xl">{summary}</p>
+
+    <dl
+      class="border-line text-ink-soft mt-6 flex flex-wrap gap-x-8 gap-y-2 border-y py-4 font-mono text-xs"
+    >
+      <div><dt class="inline">Updated —</dt><dd class="inline">{formattedDate}</dd></div>
+      {
+        tags.length > 0 && (
+          <div>
+            <dt class="inline">Topics — </dt>
+            <dd class="inline">{tags.join(', ')}</dd>
+          </div>
+        )
+      }
+    </dl>
+
+    <div class="prose prose-sm sm:prose-base mt-10 max-w-none overflow-x-auto">
+      <Content />
+    </div>
+
+    {
+      notionUrl && (
+        <div class="mt-10">
+          <Button href={notionUrl} variant="ghost">
+            View original in Notion →
+          </Button>
+        </div>
+      )
+    }
+  </article>
+</BaseLayout>

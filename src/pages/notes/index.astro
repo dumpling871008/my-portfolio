@@ -1,0 +1,19 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import NoteRow from '@/components/NoteRow.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+
+const allNotes = (await getCollection('notes', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+---
+
+<BaseLayout title="Notes" description="我的程式設計、資料工程與 AI 學習筆記。">
+  <section class="mx-auto max-w-3xl px-6 pt-16 pb-24 sm:pt-24">
+    <SectionHeading eyebrow="All notes" count={allNotes.length} />
+    <div>
+      {allNotes.map((entry) => <NoteRow entry={entry} />)}
+    </div>
+  </section>
+</BaseLayout>

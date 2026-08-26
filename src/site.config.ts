@@ -1,7 +1,7 @@
 // Edit this file to re-label the entire site. Header, Footer, the homepage
 // and SEO defaults all read from here instead of hardcoding copy.
 export const SITE = {
-  name: '林君璇 Shelly 的個人網站',
+  name: '林君璇 的個人網站',
   role: 'AI 應用工程師 | python工程師 |資料工程師 ',
   email: 'dumpling8877@gmail.com',
   tagline: '專注於資料工程、AI應用開發與Python程式設計',
@@ -18,5 +18,6 @@ export const SITE = {
 
 export const NAV_LINKS = [
   { label: 'Projects', href: '/projects' },
+  { label: 'Notes', href: '/notes' },
   { label: 'About', href: '/about' },
 ] as const;

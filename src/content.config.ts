@@ -15,6 +15,7 @@ const projects = defineCollection({
       date: z.coerce.date(),
       tags: z.array(z.string()).default([]),
       cover: image().optional(),
+      coverAlt: z.string().optional(),
       url: z.url().optional(),
       repo: z.url().optional(),
       featured: z.boolean().default(false),
@@ -22,4 +23,16 @@ const projects = defineCollection({
     }),
 });
 
-export const collections = { projects };
+const notes = defineCollection({
+  loader: glob({ base: './src/content/notes', pattern: '**/*.md' }),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string().max(180),
+    date: z.coerce.date(),
+    tags: z.array(z.string()).default([]),
+    notionUrl: z.url().optional(),
+    draft: z.boolean().default(false),
+  }),
+});
+
+export const collections = { projects, notes };
