@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig, fontProviders } from 'astro/config';
+import { defineConfig, fontProviders, passthroughImageService } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -9,6 +9,10 @@ const SITE_URL = 'https://astro-starter-portfolio.vercel.app';
 
 export default defineConfig({
   site: SITE_URL,
+
+  image: {
+    service: passthroughImageService(),
+  },
 
   integrations: [sitemap()],
 
