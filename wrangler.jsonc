@@ -3,5 +3,11 @@
   "compatibility_date": "2026-08-29",
   "assets": {
     "directory": "./dist"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "shelly-portfolio.seer-ai.cloud",
+      "custom_domain": true
+    }
+  ]
 }

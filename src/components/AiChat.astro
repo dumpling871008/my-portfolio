@@ -25,7 +25,11 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
       </button>
     </header>
 
-    <div id="ai-chat-messages" class="ai-chat__messages">
+    <div
+      id="ai-chat-messages"
+      class="ai-chat__messages"
+      aria-live="polite"
+    >
       <div class="ai-message ai-message--assistant">
         你好！你可以問我「君璇做過哪些專案？」
       </div>
@@ -65,6 +69,9 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     source_ids?: string[];
     error?: string;
   };
+
+  const REQUEST_TIMEOUT_MS = 30_000;
+  const MAX_QUESTION_LENGTH = 500;
 
   const chatRoot = document.querySelector<HTMLElement>(".ai-chat");
   const panel = document.querySelector<HTMLElement>("#ai-chat-panel");
@@ -106,6 +113,60 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     return message;
   }
 
+  function renderAssistantResponse(
+    message: HTMLDivElement,
+    data: ChatResponse,
+  ) {
+    const answer = data.response?.trim();
+    if (!answer) return;
+
+    message.textContent = "";
+
+    if (data.route === "HANDOFF") {
+      message.classList.add("ai-message--handoff");
+
+      const handoffLabel = document.createElement("div");
+      handoffLabel.className = "ai-message__handoff-label";
+      handoffLabel.textContent = "建議進一步聯絡";
+      message.appendChild(handoffLabel);
+    }
+
+    const answerText = document.createElement("div");
+    answerText.className = "ai-message__answer";
+    answerText.textContent = answer;
+    message.appendChild(answerText);
+
+    const sourceIds = Array.from(
+      new Set(
+        (data.source_ids ?? []).filter(
+          (sourceId): sourceId is string =>
+            typeof sourceId === "string" && Boolean(sourceId.trim()),
+        ),
+      ),
+    );
+
+    if (sourceIds.length === 0) return;
+
+    const sources = document.createElement("div");
+    sources.className = "ai-message__sources";
+
+    const sourcesTitle = document.createElement("div");
+    sourcesTitle.className = "ai-message__sources-title";
+    sourcesTitle.textContent = "參考資料";
+
+    const sourcesList = document.createElement("ul");
+    sourcesList.className = "ai-message__sources-list";
+
+    sourceIds.forEach((sourceId) => {
+      const item = document.createElement("li");
+      item.textContent = sourceId.trim();
+      sourcesList.appendChild(item);
+    });
+
+    sources.append(sourcesTitle, sourcesList);
+    message.appendChild(sources);
+  }
+
   toggleButton?.addEventListener("click", () => {
     setPanel(Boolean(panel?.hidden ?? true));
   });
@@ -120,7 +181,21 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     const question = input?.value.trim();
     const apiUrl = chatRoot?.dataset.apiUrl;
 
-    if (!question || !input || !submitButton) return;
+    if (!input || !submitButton) return;
+
+    if (!question) {
+      input.setCustomValidity("請輸入問題後再送出。");
+      input.reportValidity();
+      input.setCustomValidity("");
+      return;
+    }
+
+    if (question.length > MAX_QUESTION_LENGTH) {
+      input.setCustomValidity(`問題最多 ${MAX_QUESTION_LENGTH} 字。`);
+      input.reportValidity();
+      input.setCustomValidity("");
+      return;
+    }
 
     addMessage(question, "user");
     input.value = "";
@@ -136,7 +211,12 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     input.disabled = true;
     submitButton.disabled = true;
 
-    const loadingMessage = addMessage("正在查詢資料……", "assistant");
+    const loadingMessage = addMessage("AI 正在思考中…", "assistant");
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
 
     try {
       const response = await fetch(apiUrl, {
@@ -147,6 +227,7 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
         body: JSON.stringify({
           question,
         }),
+        signal: controller.signal,
       });
 
       const data: ChatResponse = await response.json().catch(() => ({}));
@@ -167,18 +248,21 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
       }
 
       if (loadingMessage) {
-        loadingMessage.textContent = data.response;
+        renderAssistantResponse(loadingMessage, data);
       }
     } catch (error) {
       if (loadingMessage) {
         loadingMessage.textContent =
-          error instanceof TypeError
+          error instanceof Error && error.name === "AbortError"
+            ? "AI 回應時間較長，請稍後再試一次。"
+            : error instanceof TypeError
             ? "目前無法連線到 AI 服務，請稍後再試。"
             : error instanceof Error
             ? error.message
             : "目前無法連線到 AI 服務。";
       }
     } finally {
+      window.clearTimeout(timeoutId);
       input.disabled = false;
       submitButton.disabled = false;
       input.focus();
@@ -270,6 +354,48 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     align-self: flex-start;
     border: 1px solid #e0ddd6;
     background: white;
+  }
+
+  .ai-message--handoff {
+    border-color: #d6a45d;
+    background: #fffaf0;
+  }
+
+  .ai-message__handoff-label,
+  .ai-message__sources-title {
+    color: #9a5b13;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  .ai-message__handoff-label {
+    margin-bottom: 6px;
+  }
+
+  .ai-message__answer {
+    white-space: pre-wrap;
+  }
+
+  .ai-message__sources {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #e8e5df;
+    white-space: normal;
+  }
+
+  .ai-message__sources-title {
+    color: #6d6a64;
+  }
+
+  .ai-message__sources-list {
+    margin: 5px 0 0;
+    padding-left: 18px;
+    color: #6d6a64;
+    font-size: 12px;
+    overflow-wrap: anywhere;
   }
 
   .ai-message--user {
