@@ -1,6 +1,6 @@
 ---
 const apiUrl =
-  import.meta.env.PUBLIC_AI_API_URL ?? "http://127.0.0.1:5000";
+  "https://career-bot-api-107560874995.europe-west1.run.app/api/chat";
 ---
 
 <div class="ai-chat" data-api-url={apiUrl}>
@@ -60,6 +60,13 @@ const apiUrl =
 </div>
 
 <script>
+  type ChatResponse = {
+    response?: string;
+    route?: string;
+    source_ids?: string[];
+    error?: string;
+  };
+
   const chatRoot = document.querySelector<HTMLElement>(".ai-chat");
   const panel = document.querySelector<HTMLElement>("#ai-chat-panel");
   const toggleButton =
@@ -124,7 +131,7 @@ const apiUrl =
     const loadingMessage = addMessage("正在查詢資料……", "assistant");
 
     try {
-      const response = await fetch(`${apiUrl}/api/chat`, {
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -134,10 +141,21 @@ const apiUrl =
         }),
       });
 
-      const data = await response.json();
+      const data: ChatResponse = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error ?? "AI 服務發生錯誤");
+        const message =
+          data.error ??
+          (response.status === 429
+            ? "詢問次數較多，請稍後再試。"
+            : response.status >= 500
+              ? "AI 服務暫時忙碌，請稍後再試。"
+              : "目前無法完成查詢，請稍後再試。");
+        throw new Error(message);
+      }
+
+      if (typeof data.response !== "string" || !data.response.trim()) {
+        throw new Error("AI 服務沒有傳回有效回答，請稍後再試。");
       }
 
       if (loadingMessage) {
@@ -146,7 +164,9 @@ const apiUrl =
     } catch (error) {
       if (loadingMessage) {
         loadingMessage.textContent =
-          error instanceof Error
+          error instanceof TypeError
+            ? "目前無法連線到 AI 服務，請稍後再試。"
+            : error instanceof Error
             ? error.message
             : "目前無法連線到 AI 服務。";
       }
