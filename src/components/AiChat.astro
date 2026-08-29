@@ -101,7 +101,7 @@ const apiUrl =
   }
 
   toggleButton?.addEventListener("click", () => {
-    setPanel(panel?.hidden ?? true);
+    setPanel(Boolean(panel?.hidden ?? true));
   });
 
   closeButton?.addEventListener("click", () => {
