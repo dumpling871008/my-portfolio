@@ -1,49 +1,264 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import Button from '@/components/Button.astro';
+import ResumeDownload from '@/components/ResumeDownload.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
 import { SITE } from '@/site.config';
 
-const tools = ['TypeScript', 'Astro', 'React', 'Figma', 'Tailwind CSS', 'Node.js'];
+const buildAreas = [
+  {
+    number: '01',
+    title: 'AI × Product',
+    lead: '怎麼讓 AI 真正成為產品流程的一部分？',
+    body: '從 LLM API、RAG 問答，到影像辨識與自動標註，我喜歡處理模型前後的整合：使用者怎麼送出資料、後端怎麼處理任務、結果怎麼儲存，以及最後怎麼讓使用者拿到真正有用的輸出。',
+  },
+  {
+    number: '02',
+    title: 'Data × Pipeline',
+    lead: '資料很少一開始就是乾淨的。',
+    body: '所以我持續練習從原始資料開始，處理資料清洗、驗證、轉換、資料庫設計與 ETL Pipeline。比起單純得到最後的結果，我更在意這筆資料從哪裡來、經過了什麼，以及出了問題之後能不能追蹤。',
+  },
+  {
+    number: '03',
+    title: 'Backend × Cloud',
+    lead: '把一個功能從本機一路推到真正可以使用。',
+    body: '包含 API、資料庫、背景任務、檔案儲存、身分驗證、Docker，以及雲端部署。原本散落在不同地方的技術，最後真的變成一條完整的使用流程，是我覺得開發最有成就感的時刻。',
+  },
+];
+
+const workPrinciples = [
+  {
+    number: '01',
+    title: 'Break it down.',
+    body: '遇到複雜的問題時，我通常不會立刻開始改程式。我會先確認：現在發生了什麼問題？問題可能在哪一層？我該如何驗證自己的猜測？把問題拆成小部分之後，很多原本看起來很混亂的事情，通常就會開始變得清楚。',
+  },
+  {
+    number: '02',
+    title: 'Make it understandable.',
+    body: '我很喜歡把自己剛理解的事情重新整理一次。可能是一份筆記、一張流程圖、一段 README，或是一套別人也能照著操作的步驟。過去的教學與 SOP 整理經驗，也讓我習慣思考：「如果今天不是我在操作，另一個人看得懂嗎？」這個習慣後來也延伸到我的程式、文件與系統設計裡。',
+  },
+  {
+    number: '03',
+    title: 'Ask one more why.',
+    body: '我不是那種看到程式可以執行，就會馬上停止的人。很多時候我還是會繼續問：「可是它為什麼這樣運作？」我喜歡把一個原本只是「會用」的東西，慢慢理解成「知道它在做什麼」。',
+  },
+];
+
+const toolGroups = [
+  { label: 'Core', tools: ['Python', 'SQL', 'Flask', 'PostgreSQL', 'MySQL'] },
+  { label: 'AI & Data', tools: ['Gemini API', 'RAG', 'Pandas', 'ETL', 'REST API'] },
+  { label: 'Cloud & Dev', tools: ['GCP', 'Docker', 'Git', 'Cloud Run', 'GCS'] },
+  { label: 'Web', tools: ['Astro', 'TypeScript', 'Tailwind CSS'] },
+];
+
+const currentFocus = [
+  { label: 'Currently learning', value: 'Data Engineering & System Design' },
+  { label: 'Currently building', value: 'AI × Data Side Projects' },
+  { label: 'Currently improving', value: 'SQL · Backend · Cloud' },
+  { label: 'Currently writing', value: 'Engineering Notes' },
+];
 ---
 
-<BaseLayout title="About" description={`A bit about ${SITE.name} and how they work.`}>
-  <section class="mx-auto max-w-3xl px-6 pt-16 pb-24 sm:pt-24">
+<BaseLayout
+  title="About"
+  description="認識林君璇如何把 AI、資料與後端流程，做成真正能被使用的產品。"
+>
+  <section class="mx-auto max-w-3xl px-6 pt-16 pb-20 sm:pt-24 sm:pb-24">
     <p class="text-ink-soft mb-6 font-mono text-xs tracking-[0.2em] uppercase">About</p>
 
-    <h1 class="font-display text-ink max-w-xl text-3xl font-medium sm:text-4xl">
-      {SITE.role}.
+    <h1 class="font-display text-ink max-w-2xl text-4xl leading-[1.12] font-medium sm:text-5xl">
+      把 AI、資料與後端流程，<br class="hidden sm:block" />做成真正能被使用的產品。
     </h1>
 
-    <div class="prose prose-sm sm:prose-base mt-8 max-w-xl">
+    <p class="text-signal mt-7 font-mono text-xs tracking-wide uppercase sm:text-sm">
+      AI Application · Python Backend · Data Engineering
+    </p>
+
+    <div class="mt-7">
+      <ResumeDownload />
+    </div>
+
+    <div class="prose prose-sm sm:prose-base mt-10 max-w-2xl">
+      <p>我喜歡把一個看起來複雜的需求，拆成可以一步一步完成的流程。</p>
       <p>
-        I start most projects by trying to find the smallest version of the problem — the one
-        screen, one flow, or one fix that actually matters — and build that first, properly, before
-        expanding outward.
+        比起一開始就追求很多功能，我更習慣先找到真正需要解決的問題，做出一條可以完整運作的流程，再慢慢補上資料處理、錯誤狀態、權限、部署與使用體驗。
       </p>
       <p>
-        That usually means fewer features than a kickoff deck promises, and more attention to the
-        parts people interact with constantly: load times, empty states, error messages, the things
-        that quietly decide whether software feels good to use.
+        目前我主要投入 <strong>AI 應用、Python 後端與資料工程</strong
+        >，並持續練習如何把模型、資料、API、資料庫與雲端服務串在一起。
       </p>
-      <p>
-        Outside of client and product work, I maintain a couple of small open-source tools and write
-        occasional notes on what I learn building them.
+      <p>對我來說，寫程式的目的不只是讓功能「跑起來」。我更在意的是：</p>
+    </div>
+
+    <div class="border-line bg-line mt-8 grid gap-px overflow-hidden border sm:grid-cols-2">
+      <p class="bg-paper text-ink font-display p-5 text-lg">當資料出錯時，系統會怎麼處理？</p>
+      <p class="bg-paper text-ink font-display p-5 text-lg">
+        任務失敗時，能不能知道問題發生在哪裡？
+      </p>
+      <p class="bg-paper text-ink font-display p-5 text-lg">
+        使用者操作時，知不知道系統現在正在做什麼？
+      </p>
+      <p class="bg-paper text-ink font-display p-5 text-lg">
+        半年後再回來看這段程式，還能不能理解它？
       </p>
     </div>
 
-    <div class="mt-10">
-      <p class="text-ink-soft mb-3 font-mono text-xs tracking-[0.2em] uppercase">Tools</p>
-      <ul class="flex flex-wrap gap-2">
+    <p
+      class="border-signal font-display text-ink mt-9 max-w-2xl border-l-2 pl-5 text-2xl leading-snug sm:text-3xl"
+    >
+      能跑只是第一步，能被理解、維護與使用，才是我真正想完成的東西。
+    </p>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 pb-24">
+    <SectionHeading eyebrow="What I build" />
+
+    <div class="divide-line divide-y">
+      {
+        buildAreas.map((area) => (
+          <article class="grid gap-4 py-8 first:pt-0 sm:grid-cols-[3rem_1fr] sm:gap-6">
+            <span class="text-signal font-mono text-xs">{area.number}</span>
+            <div>
+              <h3 class="font-display text-ink text-2xl font-medium">{area.title}</h3>
+              <p class="text-ink mt-4 font-medium">{area.lead}</p>
+              <p class="text-ink-soft mt-3 max-w-2xl leading-7">{area.body}</p>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 pb-24">
+    <SectionHeading eyebrow="How I work" />
+
+    <div class="grid gap-4 sm:grid-cols-3">
+      {
+        workPrinciples.map((principle) => (
+          <article class="border-line bg-surface border p-5">
+            <span class="text-signal font-mono text-xs">{principle.number}</span>
+            <h3 class="font-display text-ink mt-8 text-xl font-medium">{principle.title}</h3>
+            <p class="text-ink-soft mt-4 text-sm leading-7">{principle.body}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 pb-24">
+    <SectionHeading eyebrow="Tools" />
+
+    <div class="grid gap-x-10 gap-y-8 sm:grid-cols-2">
+      {
+        toolGroups.map((group) => (
+          <div>
+            <h3 class="text-ink-soft mb-3 font-mono text-xs tracking-[0.18em] uppercase">
+              {group.label}
+            </h3>
+            <ul class="flex flex-wrap gap-2">
+              {group.tools.map((tool) => (
+                <li class="border-line text-ink rounded-full border px-3 py-1.5 font-mono text-xs">
+                  {tool}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 pb-24">
+    <SectionHeading eyebrow="Beyond code" />
+
+    <h2 class="font-display text-ink max-w-2xl text-3xl leading-tight font-medium sm:text-4xl">
+      程式之外，我也需要讓腦袋離開問題一下。
+    </h2>
+
+    <div class="prose prose-sm sm:prose-base mt-8 max-w-2xl">
+      <p>
+        長時間卡在一個問題裡時，我不太喜歡一直硬盯著螢幕。有時候暫時把注意力移開，讓腦袋重新整理一次，反而能跳脫原本的視角，找到問題的根源。
+      </p>
+      <p>
+        我也很享受那些沒有「一定要得到答案」的時間。對我來說，工作和休息不是完全相反的兩件事情。很多原本想不通的問題，反而是在停止用力想之後，慢慢有了新的方向。
+      </p>
+    </div>
+
+    <div class="border-line mt-12 grid gap-10 border-t pt-10 sm:grid-cols-2">
+      <article>
+        <p class="text-signal font-mono text-xs tracking-[0.18em] uppercase">A little about me</p>
+        <p class="text-ink-soft mt-4 leading-7">
+          我是一個好奇心很重的人。遇到新的東西，很容易一路從「這怎麼用？」問到「所以它底層到底在做什麼？」同時，我也很喜歡把混亂的資訊整理成自己看得懂的結構。可能這也是為什麼，比起單純完成一個功能，我更享受把一整條流程慢慢拼起來的過程。
+        </p>
+      </article>
+
+      <article>
+        <p class="text-signal font-mono text-xs tracking-[0.18em] uppercase">Fun fact</p>
+        <p class="font-display text-ink mt-4 text-xl leading-snug">
+          遇到不懂的東西，我通常會一路問到「為什麼」。
+        </p>
+        <p class="text-ink-soft mt-4 leading-7">
+          而且很常原本只是想查一個錯誤訊息，最後莫名其妙開始研究整個系統的運作方式。
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 pb-24">
+    <SectionHeading eyebrow="Now" />
+
+    <dl class="border-line grid border-t sm:grid-cols-2">
+      {
+        currentFocus.map((item) => (
+          <div class="border-line border-b py-5 sm:odd:pr-6 sm:even:border-l sm:even:pl-6">
+            <dt class="text-ink-soft font-mono text-xs tracking-wide uppercase">{item.label}</dt>
+            <dd class="text-ink mt-2 font-medium">{item.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section id="connect" class="mx-auto max-w-3xl px-6 pb-24">
+    <div class="border-line bg-surface border p-7 sm:p-10">
+      <p class="text-signal font-mono text-xs tracking-[0.2em] uppercase">Let's connect</p>
+      <h2 class="font-display text-ink mt-5 text-3xl font-medium sm:text-4xl">
+        有有趣的問題想一起解決嗎？
+      </h2>
+      <p class="text-ink-soft mt-5 max-w-2xl leading-7">
+        我喜歡討論
+        AI、資料、後端系統，以及如何把一個想法從「好像可以」慢慢做成「真的可以使用」。如果你正在尋找一位願意把問題拆清楚、把功能做完整，也願意持續學習的工程夥伴，很歡迎找我聊聊。
+      </p>
+
+      <a
+        href="/#contact"
+        class="bg-ink text-paper hover:bg-signal mt-7 inline-flex items-center px-5 py-3 font-mono text-xs font-medium transition-colors"
+      >
+        前往聯絡我 →
+      </a>
+
+      <nav
+        class="border-line mt-8 flex flex-wrap gap-x-5 gap-y-3 border-t pt-6"
+        aria-label="社群連結"
+      >
         {
-          tools.map((tool) => (
-            <li class="border-line text-ink-soft rounded-full border px-3 py-1 font-mono text-xs">
-              {tool}
-            </li>
+          SITE.social.map((link) => (
+            <a
+              href={link.href.trim()}
+              target="_blank"
+              rel="me noopener noreferrer"
+              class="text-ink-soft hover:text-signal font-mono text-xs transition-colors"
+            >
+              {link.label} ↗
+            </a>
           ))
         }
-      </ul>
+        <a
+          href={`mailto:${SITE.email}`}
+          class="text-ink-soft hover:text-signal font-mono text-xs transition-colors"
+        >
+          Email ↗
+        </a>
+      </nav>
     </div>
-
-    <Button href={`mailto:${SITE.email}`} class="mt-10">Get in touch</Button>
   </section>
 </BaseLayout>

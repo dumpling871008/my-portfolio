@@ -1,0 +1,399 @@
+---
+const configuredMessageApiUrl = import.meta.env.PUBLIC_MESSAGE_API_URL?.trim() ?? '';
+const chatApiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? '';
+const derivedMessageApiUrl = /\/api\/chat\/?$/.test(chatApiUrl)
+  ? chatApiUrl.replace(/\/api\/chat\/?$/, '/api/messages')
+  : '';
+const messageApiUrl = configuredMessageApiUrl || derivedMessageApiUrl;
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? '';
+const isConfigured = Boolean(messageApiUrl && turnstileSiteKey);
+---
+
+<form
+  class="contact-form"
+  data-contact-form
+  data-api-url={messageApiUrl}
+  data-turnstile-site-key={turnstileSiteKey}
+>
+  <div class="contact-form__grid">
+    <label>
+      <span>你的名字</span>
+      <input name="name" type="text" autocomplete="name" maxlength="80" required />
+    </label>
+
+    <label>
+      <span>Email</span>
+      <input name="email" type="email" autocomplete="email" maxlength="254" required />
+    </label>
+  </div>
+
+  <label>
+    <span>想聊什麼？</span>
+    <select name="topic" required>
+      <option value="">請選擇主題</option>
+      <option value="job">工作機會</option>
+      <option value="collaboration">專案合作</option>
+      <option value="feedback">網站回饋</option>
+      <option value="other">其他</option>
+    </select>
+  </label>
+
+  <label>
+    <span>留言內容</span>
+    <textarea
+      name="message"
+      rows="6"
+      minlength="10"
+      maxlength="2000"
+      placeholder="請簡單說明你想討論的事情（至少 10 個字）"
+      required></textarea>
+  </label>
+
+  <div class="contact-form__honeypot" aria-hidden="true">
+    <label>
+      Website
+      <input name="website" type="text" tabindex="-1" autocomplete="off" />
+    </label>
+  </div>
+
+  <input name="turnstile_token" type="hidden" />
+  <div class="contact-form__verification" data-turnstile-container></div>
+
+  <div class="contact-form__footer">
+    <p class="contact-form__privacy">
+      留言不會公開，內容只會儲存在我的私人後台，供我回覆聯絡使用。
+    </p>
+    <button type="submit" disabled={!isConfigured}>
+      <span data-submit-label>送出留言</span>
+      <span aria-hidden="true">→</span>
+    </button>
+  </div>
+
+  <p class="contact-form__status" data-form-status aria-live="polite">
+    {!isConfigured ? '留言服務尚未完成設定，你仍可透過下方 Email 聯絡我。' : ''}
+  </p>
+</form>
+
+<script>
+  type TurnstileWidgetId = string | number;
+  type TurnstileApi = {
+    render: (
+      container: HTMLElement,
+      options: {
+        sitekey: string;
+        action: string;
+        theme: 'auto';
+        callback: (token: string) => void;
+        'expired-callback': () => void;
+        'error-callback': () => void;
+      },
+    ) => TurnstileWidgetId;
+    reset: (widgetId: TurnstileWidgetId) => void;
+  };
+  type TurnstileWindow = Window &
+    typeof globalThis & {
+      turnstile?: TurnstileApi;
+    };
+  type MessageResponse = {
+    message?: string;
+    error?: string;
+  };
+
+  let turnstilePromise: Promise<TurnstileApi> | undefined;
+
+  function loadTurnstile(): Promise<TurnstileApi> {
+    const currentWindow = window as TurnstileWindow;
+    if (currentWindow.turnstile) return Promise.resolve(currentWindow.turnstile);
+    if (turnstilePromise) return turnstilePromise;
+
+    turnstilePromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector<HTMLScriptElement>(
+        'script[data-contact-turnstile]',
+      );
+      const script = existingScript ?? document.createElement('script');
+
+      const handleLoad = () => {
+        if (currentWindow.turnstile) {
+          resolve(currentWindow.turnstile);
+          return;
+        }
+        reject(new Error('Turnstile did not initialize.'));
+      };
+
+      script.addEventListener('load', handleLoad, { once: true });
+      script.addEventListener('error', () => reject(new Error('Turnstile could not be loaded.')), {
+        once: true,
+      });
+
+      if (!existingScript) {
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.dataset.contactTurnstile = 'true';
+        document.head.appendChild(script);
+      }
+    });
+
+    return turnstilePromise;
+  }
+
+  function setStatus(element: HTMLElement, message: string, kind: 'idle' | 'success' | 'error') {
+    element.textContent = message;
+    element.dataset.kind = kind;
+  }
+
+  function initializeContactForms() {
+    document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach(async (form) => {
+      if (form.dataset.initialized === 'true') return;
+      form.dataset.initialized = 'true';
+
+      const apiUrl = form.dataset.apiUrl ?? '';
+      const siteKey = form.dataset.turnstileSiteKey ?? '';
+      const status = form.querySelector<HTMLElement>('[data-form-status]');
+      const submitButton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      const submitLabel = form.querySelector<HTMLElement>('[data-submit-label]');
+      const tokenInput = form.elements.namedItem('turnstile_token') as HTMLInputElement | null;
+      const widgetContainer = form.querySelector<HTMLElement>('[data-turnstile-container]');
+
+      if (!status || !submitButton || !submitLabel || !tokenInput || !widgetContainer) return;
+      if (!apiUrl || !siteKey) return;
+
+      let turnstile: TurnstileApi;
+      let widgetId: TurnstileWidgetId;
+
+      try {
+        turnstile = await loadTurnstile();
+        widgetId = turnstile.render(widgetContainer, {
+          sitekey: siteKey,
+          action: 'contact',
+          theme: 'auto',
+          callback: (token) => {
+            tokenInput.value = token;
+            setStatus(status, '', 'idle');
+          },
+          'expired-callback': () => {
+            tokenInput.value = '';
+            setStatus(status, '驗證已逾時，請重新驗證。', 'error');
+          },
+          'error-callback': () => {
+            tokenInput.value = '';
+            setStatus(status, '人機驗證載入失敗，請重新整理頁面。', 'error');
+          },
+        });
+      } catch {
+        submitButton.disabled = true;
+        setStatus(status, '人機驗證目前無法載入，請稍後再試。', 'error');
+        return;
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (!form.reportValidity()) return;
+        if (!tokenInput.value) {
+          setStatus(status, '請先完成人機驗證。', 'error');
+          return;
+        }
+
+        const formData = new FormData(form);
+        submitButton.disabled = true;
+        submitLabel.textContent = '送出中…';
+        setStatus(status, '正在安全地送出留言…', 'idle');
+
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: formData.get('name'),
+              email: formData.get('email'),
+              topic: formData.get('topic'),
+              message: formData.get('message'),
+              website: formData.get('website'),
+              turnstile_token: tokenInput.value,
+            }),
+          });
+          const result: MessageResponse = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            throw new Error(result.error ?? '目前無法送出留言，請稍後再試。');
+          }
+
+          form.reset();
+          tokenInput.value = '';
+          turnstile.reset(widgetId);
+          setStatus(status, result.message ?? '留言已送出，謝謝你！', 'success');
+        } catch (error) {
+          tokenInput.value = '';
+          turnstile.reset(widgetId);
+          setStatus(
+            status,
+            error instanceof Error ? error.message : '目前無法送出留言，請稍後再試。',
+            'error',
+          );
+        } finally {
+          submitButton.disabled = false;
+          submitLabel.textContent = '送出留言';
+        }
+      });
+    });
+  }
+
+  initializeContactForms();
+  document.addEventListener('astro:page-load', initializeContactForms);
+</script>
+
+<style>
+  .contact-form {
+    display: grid;
+    gap: 1.25rem;
+    margin-top: 2rem;
+  }
+
+  .contact-form__grid {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .contact-form label {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .contact-form label > span {
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .contact-form input,
+  .contact-form select,
+  .contact-form textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    padding: 0.85rem 0.9rem;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .contact-form textarea {
+    min-height: 9rem;
+    resize: vertical;
+    line-height: 1.65;
+  }
+
+  .contact-form input:focus,
+  .contact-form select:focus,
+  .contact-form textarea:focus {
+    border-color: var(--signal);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 12%, transparent);
+  }
+
+  .contact-form input::placeholder,
+  .contact-form textarea::placeholder {
+    color: var(--ink-soft);
+  }
+
+  .contact-form__honeypot {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .contact-form__verification {
+    min-height: 65px;
+  }
+
+  .contact-form__footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .contact-form__privacy {
+    max-width: 28rem;
+    color: var(--ink-soft);
+    font-size: 0.75rem;
+    line-height: 1.7;
+  }
+
+  .contact-form button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.65rem;
+    border: 0;
+    padding: 0.8rem 1.1rem;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background 150ms ease,
+      transform 150ms ease;
+  }
+
+  .contact-form button:hover:not(:disabled) {
+    background: var(--signal);
+    transform: translateY(-1px);
+  }
+
+  .contact-form button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .contact-form__status {
+    min-height: 1.5rem;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+  }
+
+  .contact-form__status[data-kind='success'] {
+    color: #248448;
+  }
+
+  .contact-form__status[data-kind='error'] {
+    color: #b84040;
+  }
+
+  @media (min-width: 640px) {
+    .contact-form__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 639px) {
+    .contact-form__footer {
+      flex-direction: column;
+    }
+
+    .contact-form button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .contact-form input,
+    .contact-form select,
+    .contact-form textarea,
+    .contact-form button {
+      transition: none;
+    }
+  }
+</style>

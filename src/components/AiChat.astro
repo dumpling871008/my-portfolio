@@ -1,53 +1,63 @@
 ---
-const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
+const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? '';
 ---
 
-<div class="ai-chat" data-api-url={apiUrl}>
-  <section
-    id="ai-chat-panel"
-    class="ai-chat__panel"
-    aria-label="AI 詢問助手"
-    hidden
-  >
+<div class="ai-chat" data-api-url={apiUrl} transition:persist="career-ai-chat">
+  <section id="ai-chat-panel" class="ai-chat__panel" aria-label="AI 詢問助手" hidden>
     <header class="ai-chat__header">
-      <div>
-        <strong>詢問君璇的 AI</strong>
-        <p>你可以詢問我的經歷、技能與專案</p>
+      <div class="ai-chat__identity">
+        <span class="ai-chat__avatar" aria-hidden="true">JH</span>
+        <div>
+          <strong>君璇的 Career AI</strong>
+          <p><span aria-hidden="true"></span>可詢問經歷、技能與專案</p>
+        </div>
       </div>
 
-      <button
-        id="ai-chat-close"
-        class="ai-chat__close"
-        type="button"
-        aria-label="關閉聊天視窗"
-      >
-        ×
+      <button id="ai-chat-close" class="ai-chat__close" type="button" aria-label="關閉聊天視窗">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m6 6 12 12M18 6 6 18"></path>
+        </svg>
       </button>
     </header>
 
-    <div
-      id="ai-chat-messages"
-      class="ai-chat__messages"
-      aria-live="polite"
-    >
+    <div id="ai-chat-messages" class="ai-chat__messages" aria-live="polite">
       <div class="ai-message ai-message--assistant">
-        你好！你可以問我「君璇做過哪些專案？」
+        你好，我是君璇的 AI 助手。想先從哪裡認識她？
+      </div>
+
+      <div class="ai-chat__suggestions" aria-label="推薦問題">
+        <button type="button">介紹一下君璇</button>
+        <button type="button">她做過哪些專案？</button>
+        <button type="button">她會哪些技術？</button>
       </div>
     </div>
 
     <form id="ai-chat-form" class="ai-chat__form">
-      <input
-        id="ai-chat-input"
-        type="text"
-        maxlength="500"
-        placeholder="輸入想詢問的問題"
-        autocomplete="off"
-        required
-      />
+      <label class="sr-only" for="ai-chat-input">輸入想詢問的問題</label>
+      <p id="ai-chat-privacy" class="ai-chat__privacy">
+        問題與回答會保存，用於改善服務，請勿輸入敏感資訊。
+      </p>
+      <div class="ai-chat__composer">
+        <textarea
+          id="ai-chat-input"
+          rows="1"
+          maxlength="500"
+          placeholder="輸入想詢問的問題…"
+          autocomplete="off"
+          aria-describedby="ai-chat-privacy"
+          required></textarea>
 
-      <button id="ai-chat-submit" type="submit">
-        傳送
-      </button>
+        <button id="ai-chat-submit" type="submit" aria-label="傳送訊息">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 12 14-7-4 14-3-6-7-1Z"></path>
+            <path d="m12 13 7-8"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="ai-chat__form-meta">
+        <span>AI 回答可能有誤，重要資訊請再確認</span>
+        <span id="ai-chat-count" aria-live="off">0 / 500</span>
+      </div>
     </form>
   </section>
 
@@ -58,7 +68,13 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     aria-controls="ai-chat-panel"
     aria-expanded="false"
   >
-    詢問 AI
+    <span class="ai-chat__toggle-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M7 17.5 3.5 20v-4.5A8 8 0 1 1 7 17.5Z"></path>
+        <path d="M8 10h8M8 13h5"></path>
+      </svg>
+    </span>
+    <span>詢問 Career AI</span>
   </button>
 </div>
 
@@ -70,40 +86,152 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     error?: string;
   };
 
+  type SiteLink = {
+    href: string;
+    label: string;
+    description: string;
+  };
+
+  type SiteLinkRule = SiteLink & {
+    sourceFragments?: string[];
+    keywords?: RegExp;
+  };
+
   const REQUEST_TIMEOUT_MS = 30_000;
   const MAX_QUESTION_LENGTH = 500;
 
-  const chatRoot = document.querySelector<HTMLElement>(".ai-chat");
-  const panel = document.querySelector<HTMLElement>("#ai-chat-panel");
-  const toggleButton =
-    document.querySelector<HTMLButtonElement>("#ai-chat-toggle");
-  const closeButton =
-    document.querySelector<HTMLButtonElement>("#ai-chat-close");
-  const form = document.querySelector<HTMLFormElement>("#ai-chat-form");
-  const input = document.querySelector<HTMLInputElement>("#ai-chat-input");
-  const submitButton =
-    document.querySelector<HTMLButtonElement>("#ai-chat-submit");
-  const messages =
-    document.querySelector<HTMLElement>("#ai-chat-messages");
+  const SITE_LINK_RULES: SiteLinkRule[] = [
+    {
+      href: '/projects/seer',
+      label: '查看 SEER 專案',
+      description: '了解系統功能、架構與我的角色',
+      sourceFragments: ['05_seer'],
+      keywords: /\bseer\b|智慧影像|影像標註/i,
+    },
+    {
+      href: '/notes/line-bot',
+      label: '閱讀 LINE Bot 筆記',
+      description: '查看 LINE Bot 的串接與實作紀錄',
+      sourceFragments: ['06_linebot_portfolio'],
+      keywords: /line\s*bot|linebot|聊天機器人|career\s*(ai|bot)/i,
+    },
+    {
+      href: '/notes/cloud-infrastructure',
+      label: '閱讀雲端建置筆記',
+      description: '查看 GCP、Cloud Run 與 Docker 實作',
+      keywords: /gcp|cloud\s*run|docker|雲端|基礎建設/i,
+    },
+    {
+      href: '/notes/deep-learning',
+      label: '閱讀 Deep Learning 筆記',
+      description: '查看深度學習的整理與實作',
+      keywords: /deep\s*learning|深度學習/i,
+    },
+    {
+      href: '/notes/machine-learning',
+      label: '閱讀 Machine Learning 筆記',
+      description: '查看機器學習流程與核心概念',
+      keywords: /machine\s*learning|機器學習/i,
+    },
+    {
+      href: '/notes/mysql',
+      label: '閱讀 MySQL 筆記',
+      description: '查看資料庫觀念與 SQL 實作',
+      keywords: /mysql|資料庫|\bsql\b/i,
+    },
+    {
+      href: '/notes/opencv',
+      label: '閱讀 OpenCV 筆記',
+      description: '查看電腦視覺與影像處理內容',
+      keywords: /opencv|電腦視覺|影像處理/i,
+    },
+    {
+      href: '/notes/python',
+      label: '閱讀 Python 筆記',
+      description: '查看 Python 觀念與程式實作',
+      keywords: /python/i,
+    },
+    {
+      href: '/notes/web-scraping',
+      label: '閱讀爬蟲筆記',
+      description: '查看網頁資料擷取的學習紀錄',
+      keywords: /爬蟲|web\s*scrap/i,
+    },
+    {
+      href: '/notes/git',
+      label: '閱讀 Git 筆記',
+      description: '查看版本控制與常用操作',
+      keywords: /\bgit\b|版本控制/i,
+    },
+    {
+      href: '/projects',
+      label: '瀏覽所有專案',
+      description: '查看完整作品與開發成果',
+      sourceFragments: ['projects/'],
+      keywords: /專案|作品|portfolio/i,
+    },
+    {
+      href: '/about',
+      label: '進一步認識君璇',
+      description: '查看經歷、技能與學習背景',
+      sourceFragments: [
+        '01_profile',
+        '02_skills',
+        '03_work_experience',
+        '04_education_and_transition',
+        '07_job_preferences',
+      ],
+      keywords: /經歷|技能|背景|學歷|教育|轉職|履歷|求職|職涯/i,
+    },
+    {
+      href: '/notes',
+      label: '瀏覽學習筆記',
+      description: '查看技術整理與實作紀錄',
+      keywords: /筆記|學習紀錄|學了什麼/i,
+    },
+  ];
+
+  const chatRoot = document.querySelector<HTMLElement>('.ai-chat');
+  const panel = document.querySelector<HTMLElement>('#ai-chat-panel');
+  const toggleButton = document.querySelector<HTMLButtonElement>('#ai-chat-toggle');
+  const closeButton = document.querySelector<HTMLButtonElement>('#ai-chat-close');
+  const form = document.querySelector<HTMLFormElement>('#ai-chat-form');
+  const input = document.querySelector<HTMLTextAreaElement>('#ai-chat-input');
+  const submitButton = document.querySelector<HTMLButtonElement>('#ai-chat-submit');
+  const messages = document.querySelector<HTMLElement>('#ai-chat-messages');
+  const count = document.querySelector<HTMLElement>('#ai-chat-count');
+  const suggestions = document.querySelector<HTMLElement>('.ai-chat__suggestions');
+
+  function resizeInput() {
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = `${Math.min(input.scrollHeight, 112)}px`;
+  }
+
+  function updateCount() {
+    if (count && input) {
+      count.textContent = `${input.value.length} / ${MAX_QUESTION_LENGTH}`;
+    }
+  }
 
   function setPanel(open: boolean) {
     if (!panel || !toggleButton) return;
 
     panel.hidden = !open;
-    toggleButton.setAttribute("aria-expanded", String(open));
+    toggleButton.setAttribute('aria-expanded', String(open));
+    toggleButton.setAttribute('aria-label', open ? '關閉 Career AI' : '開啟 Career AI');
 
     if (open) {
       input?.focus();
+    } else {
+      toggleButton.focus();
     }
   }
 
-  function addMessage(
-    text: string,
-    role: "user" | "assistant",
-  ): HTMLDivElement | null {
+  function addMessage(text: string, role: 'user' | 'assistant'): HTMLDivElement | null {
     if (!messages) return null;
 
-    const message = document.createElement("div");
+    const message = document.createElement('div');
     message.className = `ai-message ai-message--${role}`;
     message.textContent = text;
 
@@ -113,26 +241,92 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     return message;
   }
 
-  function renderAssistantResponse(
-    message: HTMLDivElement,
-    data: ChatResponse,
-  ) {
+  function getSuggestedLinks(question: string, data: ChatResponse): SiteLink[] {
+    const sourceText = (data.source_ids ?? [])
+      .filter((sourceId): sourceId is string => typeof sourceId === 'string')
+      .join(' ')
+      .toLowerCase();
+    const contentText = `${question} ${data.response ?? ''}`;
+    const matches: SiteLink[] = [];
+
+    if (data.route === 'HANDOFF') {
+      matches.push({
+        href: '/#contact',
+        label: '前往聯絡方式',
+        description: '直接與君璇聯絡，進一步確認資訊',
+      });
+    }
+
+    SITE_LINK_RULES.forEach((rule) => {
+      const matchesSource = rule.sourceFragments?.some((fragment) => sourceText.includes(fragment));
+      const matchesKeyword = rule.keywords?.test(contentText);
+
+      if (matchesSource || matchesKeyword) {
+        matches.push(rule);
+      }
+    });
+
+    return Array.from(new Map(matches.map((link) => [link.href, link])).values()).slice(0, 2);
+  }
+
+  function renderSuggestedLinks(message: HTMLDivElement, links: SiteLink[]) {
+    if (links.length === 0) return;
+
+    const linksSection = document.createElement('div');
+    linksSection.className = 'ai-message__links';
+
+    const linksTitle = document.createElement('div');
+    linksTitle.className = 'ai-message__links-title';
+    linksTitle.textContent = '延伸查看';
+
+    const linksList = document.createElement('div');
+    linksList.className = 'ai-message__links-list';
+
+    links.forEach((item) => {
+      const link = document.createElement('a');
+      link.className = 'ai-message__link';
+      link.href = item.href;
+
+      const copy = document.createElement('span');
+      copy.className = 'ai-message__link-copy';
+
+      const label = document.createElement('strong');
+      label.textContent = item.label;
+
+      const description = document.createElement('small');
+      description.textContent = item.description;
+
+      const arrow = document.createElement('span');
+      arrow.className = 'ai-message__link-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+
+      copy.append(label, description);
+      link.append(copy, arrow);
+      linksList.appendChild(link);
+    });
+
+    linksSection.append(linksTitle, linksList);
+    message.appendChild(linksSection);
+  }
+
+  function renderAssistantResponse(message: HTMLDivElement, data: ChatResponse, question: string) {
     const answer = data.response?.trim();
     if (!answer) return;
 
-    message.textContent = "";
+    message.textContent = '';
 
-    if (data.route === "HANDOFF") {
-      message.classList.add("ai-message--handoff");
+    if (data.route === 'HANDOFF') {
+      message.classList.add('ai-message--handoff');
 
-      const handoffLabel = document.createElement("div");
-      handoffLabel.className = "ai-message__handoff-label";
-      handoffLabel.textContent = "建議進一步聯絡";
+      const handoffLabel = document.createElement('div');
+      handoffLabel.className = 'ai-message__handoff-label';
+      handoffLabel.textContent = '建議進一步聯絡';
       message.appendChild(handoffLabel);
     }
 
-    const answerText = document.createElement("div");
-    answerText.className = "ai-message__answer";
+    const answerText = document.createElement('div');
+    answerText.className = 'ai-message__answer';
     answerText.textContent = answer;
     message.appendChild(answerText);
 
@@ -140,42 +334,79 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
       new Set(
         (data.source_ids ?? []).filter(
           (sourceId): sourceId is string =>
-            typeof sourceId === "string" && Boolean(sourceId.trim()),
+            typeof sourceId === 'string' && Boolean(sourceId.trim()),
         ),
       ),
     );
 
-    if (sourceIds.length === 0) return;
+    if (sourceIds.length > 0) {
+      const sources = document.createElement('div');
+      sources.className = 'ai-message__sources';
 
-    const sources = document.createElement("div");
-    sources.className = "ai-message__sources";
+      const sourcesTitle = document.createElement('div');
+      sourcesTitle.className = 'ai-message__sources-title';
+      sourcesTitle.textContent = '參考資料';
 
-    const sourcesTitle = document.createElement("div");
-    sourcesTitle.className = "ai-message__sources-title";
-    sourcesTitle.textContent = "參考資料";
+      const sourcesList = document.createElement('ul');
+      sourcesList.className = 'ai-message__sources-list';
 
-    const sourcesList = document.createElement("ul");
-    sourcesList.className = "ai-message__sources-list";
+      sourceIds.forEach((sourceId) => {
+        const item = document.createElement('li');
+        item.textContent = sourceId.trim();
+        sourcesList.appendChild(item);
+      });
 
-    sourceIds.forEach((sourceId) => {
-      const item = document.createElement("li");
-      item.textContent = sourceId.trim();
-      sourcesList.appendChild(item);
-    });
+      sources.append(sourcesTitle, sourcesList);
+      message.appendChild(sources);
+    }
 
-    sources.append(sourcesTitle, sourcesList);
-    message.appendChild(sources);
+    renderSuggestedLinks(message, getSuggestedLinks(question, data));
   }
 
-  toggleButton?.addEventListener("click", () => {
+  toggleButton?.addEventListener('click', () => {
     setPanel(Boolean(panel?.hidden ?? true));
   });
 
-  closeButton?.addEventListener("click", () => {
+  closeButton?.addEventListener('click', () => {
     setPanel(false);
   });
 
-  form?.addEventListener("submit", async (event) => {
+  input?.addEventListener('input', () => {
+    resizeInput();
+    updateCount();
+  });
+
+  input?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      form?.requestSubmit();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && panel && !panel.hidden) {
+      setPanel(false);
+    }
+  });
+
+  suggestions?.querySelectorAll('button').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!input) return;
+      input.value = button.textContent?.trim() ?? '';
+      updateCount();
+      resizeInput();
+      form?.requestSubmit();
+    });
+  });
+
+  messages?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('.ai-message__link')) {
+      setPanel(false);
+    }
+  });
+
+  form?.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const question = input?.value.trim();
@@ -184,45 +415,43 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     if (!input || !submitButton) return;
 
     if (!question) {
-      input.setCustomValidity("請輸入問題後再送出。");
+      input.setCustomValidity('請輸入問題後再送出。');
       input.reportValidity();
-      input.setCustomValidity("");
+      input.setCustomValidity('');
       return;
     }
 
     if (question.length > MAX_QUESTION_LENGTH) {
       input.setCustomValidity(`問題最多 ${MAX_QUESTION_LENGTH} 字。`);
       input.reportValidity();
-      input.setCustomValidity("");
+      input.setCustomValidity('');
       return;
     }
 
-    addMessage(question, "user");
-    input.value = "";
+    addMessage(question, 'user');
+    input.value = '';
+    resizeInput();
+    updateCount();
+    suggestions?.remove();
 
     if (!apiUrl) {
-      addMessage(
-        "AI 服務尚未完成設定，請稍後再試。",
-        "assistant",
-      );
+      addMessage('AI 服務尚未完成設定，請稍後再試。', 'assistant');
       return;
     }
 
     input.disabled = true;
     submitButton.disabled = true;
 
-    const loadingMessage = addMessage("AI 正在思考中…", "assistant");
+    const loadingMessage = addMessage('正在整理資料', 'assistant');
+    loadingMessage?.classList.add('ai-message--loading');
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(
-      () => controller.abort(),
-      REQUEST_TIMEOUT_MS,
-    );
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(apiUrl, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           question,
@@ -236,30 +465,32 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
         const message =
           data.error ??
           (response.status === 429
-            ? "詢問次數較多，請稍後再試。"
+            ? '詢問次數較多，請稍後再試。'
             : response.status >= 500
-              ? "AI 服務暫時忙碌，請稍後再試。"
-              : "目前無法完成查詢，請稍後再試。");
+              ? 'AI 服務暫時忙碌，請稍後再試。'
+              : '目前無法完成查詢，請稍後再試。');
         throw new Error(message);
       }
 
-      if (typeof data.response !== "string" || !data.response.trim()) {
-        throw new Error("AI 服務沒有傳回有效回答，請稍後再試。");
+      if (typeof data.response !== 'string' || !data.response.trim()) {
+        throw new Error('AI 服務沒有傳回有效回答，請稍後再試。');
       }
 
       if (loadingMessage) {
-        renderAssistantResponse(loadingMessage, data);
+        loadingMessage.classList.remove('ai-message--loading');
+        renderAssistantResponse(loadingMessage, data, question);
       }
     } catch (error) {
       if (loadingMessage) {
+        loadingMessage.classList.remove('ai-message--loading');
         loadingMessage.textContent =
-          error instanceof Error && error.name === "AbortError"
-            ? "AI 回應時間較長，請稍後再試一次。"
+          error instanceof Error && error.name === 'AbortError'
+            ? 'AI 回應時間較長，請稍後再試一次。'
             : error instanceof TypeError
-            ? "目前無法連線到 AI 服務，請稍後再試。"
-            : error instanceof Error
-            ? error.message
-            : "目前無法連線到 AI 服務。";
+              ? '目前無法連線到 AI 服務，請稍後再試。'
+              : error instanceof Error
+                ? error.message
+                : '目前無法連線到 AI 服務。';
       }
     } finally {
       window.clearTimeout(timeoutId);
@@ -273,37 +504,73 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
 <style is:global>
   .ai-chat {
     position: fixed;
-    right: 24px;
-    bottom: 24px;
+    right: clamp(16px, 3vw, 32px);
+    bottom: clamp(16px, 3vw, 32px);
     z-index: 50;
     font-family: inherit;
   }
 
   .ai-chat__toggle {
-    border: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--ink);
     border-radius: 999px;
-    padding: 12px 20px;
-    background: #171717;
-    color: white;
+    padding: 8px 16px 8px 8px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-size: 12px;
     font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    box-shadow: 0 8px 30px rgb(0 0 0 / 18%);
+    box-shadow: 0 10px 35px rgb(0 0 0 / 20%);
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .ai-chat__toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 40px rgb(0 0 0 / 24%);
+  }
+
+  .ai-chat__toggle-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--signal);
+    color: white;
+  }
+
+  .ai-chat__toggle-icon svg,
+  .ai-chat__form button svg,
+  .ai-chat__close svg {
+    width: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
   }
 
   .ai-chat__panel {
     position: absolute;
     right: 0;
-    bottom: 64px;
+    bottom: 68px;
     display: flex;
-    width: min(380px, calc(100vw - 32px));
-    height: min(540px, calc(100vh - 100px));
+    width: min(420px, calc(100vw - 32px));
+    height: min(620px, calc(100vh - 112px));
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid #dedbd4;
-    border-radius: 18px;
-    background: #fff;
-    color: #171717;
-    box-shadow: 0 18px 60px rgb(0 0 0 / 18%);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 24px 80px rgb(0 0 0 / 22%);
+    transform-origin: bottom right;
   }
 
   .ai-chat__panel[hidden] {
@@ -312,60 +579,123 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
 
   .ai-chat__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    padding: 18px;
-    border-bottom: 1px solid #e8e5df;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 88%, var(--surface));
+  }
+
+  .ai-chat__identity {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+
+  .ai-chat__identity strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .ai-chat__avatar {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--signal);
+    color: white;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
   }
 
   .ai-chat__header p {
-    margin: 4px 0 0;
-    color: #6d6a64;
-    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 3px 0 0;
+    color: var(--ink-soft);
+    font-size: 11px;
+  }
+
+  .ai-chat__header p span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #32a852;
+    box-shadow: 0 0 0 3px color-mix(in srgb, #32a852 16%, transparent);
   }
 
   .ai-chat__close {
-    border: 0;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 50%;
     background: transparent;
-    font-size: 24px;
+    color: var(--ink-soft);
     cursor: pointer;
+  }
+
+  .ai-chat__close:hover {
+    border-color: var(--line);
+    background: var(--surface);
+    color: var(--ink);
   }
 
   .ai-chat__messages {
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     overflow-y: auto;
-    padding: 18px;
-    background: #f8f7f4;
+    padding: 22px 18px;
+    overscroll-behavior: contain;
+    background:
+      radial-gradient(
+        circle at 100% 0%,
+        color-mix(in srgb, var(--signal) 6%, transparent),
+        transparent 34%
+      ),
+      var(--surface);
+    scrollbar-color: var(--line) transparent;
   }
 
   .ai-message {
-    max-width: 85%;
-    border-radius: 14px;
-    padding: 10px 13px;
+    position: relative;
+    max-width: 86%;
+    border-radius: 16px;
+    padding: 11px 14px;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.65;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .ai-message--assistant {
     align-self: flex-start;
-    border: 1px solid #e0ddd6;
-    background: white;
+    border: 1px solid var(--line);
+    border-bottom-left-radius: 5px;
+    background: var(--paper);
+    box-shadow: 0 4px 18px rgb(0 0 0 / 5%);
   }
 
   .ai-message--handoff {
-    border-color: #d6a45d;
-    background: #fffaf0;
+    border-color: color-mix(in srgb, #d28a24 55%, var(--line));
+    background: color-mix(in srgb, #d28a24 8%, var(--paper));
   }
 
   .ai-message__handoff-label,
-  .ai-message__sources-title {
-    color: #9a5b13;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-      "Liberation Mono", monospace;
+  .ai-message__sources-title,
+  .ai-message__links-title {
+    color: #a15d0a;
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -381,54 +711,186 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
 
   .ai-message__sources {
     margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid #e8e5df;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
     white-space: normal;
   }
 
   .ai-message__sources-title {
-    color: #6d6a64;
+    color: var(--ink-soft);
   }
 
   .ai-message__sources-list {
     margin: 5px 0 0;
     padding-left: 18px;
-    color: #6d6a64;
+    color: var(--ink-soft);
     font-size: 12px;
     overflow-wrap: anywhere;
   }
 
+  .ai-message__links {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    white-space: normal;
+  }
+
+  .ai-message__links-title {
+    margin-bottom: 7px;
+    color: var(--ink-soft);
+  }
+
+  .ai-message__links-list {
+    display: grid;
+    gap: 6px;
+  }
+
+  .ai-message__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid color-mix(in srgb, var(--signal) 25%, var(--line));
+    border-radius: 11px;
+    padding: 9px 10px;
+    background: color-mix(in srgb, var(--signal) 5%, var(--surface));
+    color: var(--ink);
+    text-decoration: none;
+    transition:
+      border-color 150ms ease,
+      background 150ms ease,
+      transform 150ms ease;
+  }
+
+  .ai-message__link:hover {
+    border-color: var(--signal);
+    background: color-mix(in srgb, var(--signal) 10%, var(--surface));
+    transform: translateY(-1px);
+  }
+
+  .ai-message__link-copy {
+    display: grid;
+    gap: 1px;
+  }
+
+  .ai-message__link strong {
+    color: var(--signal);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .ai-message__link small {
+    color: var(--ink-soft);
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .ai-message__link-arrow {
+    flex: 0 0 auto;
+    color: var(--signal);
+    font-family: var(--font-mono);
+    font-size: 16px;
+  }
+
   .ai-message--user {
     align-self: flex-end;
-    background: #171717;
-    color: white;
+    border-bottom-right-radius: 5px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .ai-message--loading::after {
+    content: '';
+    display: inline-block;
+    width: 1.2em;
+    animation: ai-chat-dots 1.2s steps(4, end) infinite;
+  }
+
+  .ai-chat__suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 2px;
+  }
+
+  .ai-chat__suggestions button {
+    border: 1px solid color-mix(in srgb, var(--signal) 30%, var(--line));
+    border-radius: 999px;
+    padding: 7px 10px;
+    background: color-mix(in srgb, var(--signal) 5%, var(--paper));
+    color: var(--signal);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition:
+      border-color 150ms ease,
+      background 150ms ease;
+  }
+
+  .ai-chat__suggestions button:hover {
+    border-color: var(--signal);
+    background: color-mix(in srgb, var(--signal) 10%, var(--paper));
   }
 
   .ai-chat__form {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    padding: 14px;
-    border-top: 1px solid #e8e5df;
+    padding: 12px 14px 11px;
+    border-top: 1px solid var(--line);
+    background: var(--paper);
   }
 
-  .ai-chat__form input {
+  .ai-chat__privacy {
+    margin: 0 2px 9px;
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .ai-chat__composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 7px 7px 7px 12px;
+    background: var(--surface);
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .ai-chat__composer:focus-within {
+    border-color: var(--signal);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 12%, transparent);
+  }
+
+  .ai-chat__form textarea {
+    width: 100%;
     min-width: 0;
-    border: 1px solid #d7d3cb;
-    border-radius: 10px;
-    padding: 10px 12px;
+    max-height: 112px;
+    resize: none;
+    border: 0;
+    padding: 7px 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.5;
     outline: none;
   }
 
-  .ai-chat__form input:focus {
-    border-color: #171717;
+  .ai-chat__form textarea::placeholder {
+    color: var(--ink-soft);
   }
 
   .ai-chat__form button {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    place-items: center;
     border: 0;
     border-radius: 10px;
-    padding: 0 15px;
-    background: #171717;
+    background: var(--signal);
     color: white;
     cursor: pointer;
   }
@@ -438,10 +900,92 @@ const apiUrl = import.meta.env.PUBLIC_CHAT_API_URL?.trim() ?? "";
     opacity: 0.55;
   }
 
-  @media (max-width: 480px) {
-    .ai-chat {
-      right: 16px;
-      bottom: 16px;
+  .ai-chat__form-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 7px;
+    padding: 0 2px;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+    font-size: 9px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @keyframes ai-chat-dots {
+    0% {
+      content: '';
+    }
+    25% {
+      content: '.';
+    }
+    50% {
+      content: '..';
+    }
+    75%,
+    100% {
+      content: '...';
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ai-chat__panel:not([hidden]) {
+      animation: ai-chat-open 180ms ease-out;
+    }
+
+    @keyframes ai-chat-open {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+    }
+  }
+
+  @media (max-width: 520px) {
+    .ai-chat__panel {
+      position: fixed;
+      inset: 12px;
+      width: auto;
+      height: auto;
+      border-radius: 18px;
+      transform-origin: bottom center;
+    }
+
+    .ai-chat__toggle {
+      padding-right: 14px;
+    }
+
+    .ai-chat__messages {
+      padding: 18px 14px;
+    }
+
+    .ai-chat__form {
+      padding-bottom: max(11px, env(safe-area-inset-bottom));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ai-chat__toggle,
+    .ai-chat__suggestions button,
+    .ai-message__link,
+    .ai-chat__composer {
+      transition: none;
+    }
+
+    .ai-message--loading::after {
+      animation: none;
+      content: '…';
     }
   }
 </style>

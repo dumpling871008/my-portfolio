@@ -1,0 +1,13 @@
+---
+const fileName = '林君璇_CV.pdf';
+const resumeUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${encodeURIComponent(fileName)}`;
+---
+
+<a
+  href={resumeUrl}
+  download={fileName}
+  data-astro-reload
+  class="border-line text-ink hover:border-signal hover:text-signal focus-visible:outline-signal inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
+>
+  下載履歷 PDF <span aria-hidden="true">↓</span>
+</a>

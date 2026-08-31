@@ -2,6 +2,8 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
+import ResumeDownload from '@/components/ResumeDownload.astro';
+import ContactForm from '@/components/ContactForm.astro';
 import ProjectRow from '@/components/ProjectRow.astro';
 import NoteRow from '@/components/NoteRow.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
@@ -36,6 +38,7 @@ const recentNotes = allNotes.slice(0, 3);
     <div class="mt-8 flex flex-wrap items-center gap-3">
       <Button href="/projects" variant="solid">View the projects →</Button>
       <Button href="#contact" variant="ghost">contact me</Button>
+      <ResumeDownload />
     </div>
   </section>
 
@@ -88,15 +91,21 @@ const recentNotes = allNotes.slice(0, 3);
   </section>
 
   <section id="contact" class="mx-auto max-w-3xl px-6 pb-24">
-    <SectionHeading eyebrow="Let's talk" />
-    <p class="font-display text-ink max-w-lg text-2xl sm:text-3xl">
-      Have something worth building?
-    </p>
-    <a
-      href={`mailto:${SITE.email}`}
-      class="text-signal mt-4 inline-flex items-center gap-2 font-mono hover:underline"
-    >
-      {SITE.email}
-    </a>
+    <div class="border-line bg-surface border p-7 sm:p-10">
+      <SectionHeading eyebrow="Contact me" />
+      <h2 class="font-display text-ink max-w-lg text-2xl sm:text-3xl">
+        有想法、工作機會或合作提案嗎？
+      </h2>
+      <p class="text-ink-soft mt-4 max-w-2xl leading-7">
+        歡迎留下訊息告訴我你想討論的事情。留言不會公開，我會透過你提供的 Email 與你聯絡。
+      </p>
+
+      <ContactForm />
+
+      <p class="border-line text-ink-soft mt-8 border-t pt-6 font-mono text-xs">
+        也可以直接寄信：
+        <a href={`mailto:${SITE.email}`} class="text-signal hover:underline">{SITE.email}</a>
+      </p>
+    </div>
   </section>
 </BaseLayout>
