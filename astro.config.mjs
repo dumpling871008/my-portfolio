@@ -3,7 +3,7 @@ import { defineConfig, fontProviders, passthroughImageService } from 'astro/conf
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
-// Replace with your production URL after deploying to Vercel / Netlify.
+// Production Cloudflare custom domain used for sitemap and canonical metadata.
 // It powers the sitemap and the canonical / Open Graph URLs in BaseLayout.
 const SITE_URL = 'https://shelly-portfolio.seer-ai.cloud';
 

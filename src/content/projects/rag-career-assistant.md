@@ -21,7 +21,7 @@ draft: false
 - **向量檢索**：使用 LlamaIndex 與 Google GenAI Embedding 建立向量索引，保存索引供後續載入，並依問題取回相關片段。
 - **回答與分流**：結合回答政策與檢索內容，要求 Gemini 回傳結構化結果，再由後端驗證分流欄位及來源 ID。
 - **API 與介面整合**：以 Flask 提供網站問答 API，Astro 前端送出問題、顯示回答與參考資料；LINE Bot 路由共用問答服務。
-- **雲端部署**：網站部署於 Vercel，Flask API 透過 Docker、Gunicorn 部署至 Cloud Run，需本人確認的問題記錄在 Firestore。
+- **雲端部署**：Astro 網站以 Wrangler 部署至 Cloudflare Workers，Flask API 透過 Docker、Gunicorn 部署至 Cloud Run，需本人確認的問題記錄在 Firestore。
 
 ## 問答流程
 
@@ -53,7 +53,7 @@ draft: false
 
 ### 本機 API 成功，不代表瀏覽器可以使用
 
-網站與 API 分別部署在 Vercel 和 Cloud Run，需要處理瀏覽器的跨來源請求。後端使用明確的 origin 清單，支援 JSON POST 與 OPTIONS preflight；前端透過 `PUBLIC_CHAT_API_URL` 在建置時設定 API 網址。
+網站與 API 分別部署在 Cloudflare Workers 和 Cloud Run，需要處理瀏覽器的跨來源請求。後端使用明確的 origin 清單，支援 JSON POST 與 OPTIONS preflight；前端透過 `PUBLIC_CHAT_API_URL` 在建置時設定 API 網址。
 
 ### 等待與失敗狀態也是功能的一部分
 
